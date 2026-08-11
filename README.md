@@ -8,7 +8,7 @@ customer segments, analyze retention trends, and estimate revenue at risk.
 
 ## 🌐 Live Demo
 
-🔗 **Live Application:** https://share.streamlit.io/user/vimaltamboli09-design
+🔗 **Live Application:** https://churniq-customer-intelligence-crj4ivixlpg77nsa5q272t.streamlit.app/
 
 ## 📌 Overview
 
