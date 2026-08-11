@@ -1,18 +1,27 @@
-
-import streamlit as st
-import pandas as pd
-import sqlite3
 import hashlib
+from pathlib import Path
 import re
+import sqlite3
+import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from pathlib import Path
-
+import streamlit as st
 
 # =========================================================
-# STEP 9 — PREMIUM SAAS UI / UX
+# PAGE CONFIG (MUST BE FIRST STREAMLIT COMMAND)
 # =========================================================
-st.markdown("""
+st.set_page_config(
+    page_title="ChurnIQ | Customer Intelligence",
+    page_icon="📊",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+# =========================================================
+# PREMIUM SAAS UI / UX STYLING
+# =========================================================
+st.markdown(
+    """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
@@ -20,7 +29,7 @@ html, body, [class*="css"] {
     font-family: 'Inter', sans-serif;
 }
 
-[data-testid="stAppViewContainer"] {
+.stApp {
     background:
         radial-gradient(circle at 10% 0%, rgba(59,130,246,.10), transparent 28%),
         radial-gradient(circle at 95% 8%, rgba(139,92,246,.09), transparent 25%),
@@ -63,6 +72,37 @@ html, body, [class*="css"] {
     padding-bottom: 3rem;
 }
 
+.brand {
+    padding: 8px 4px 24px 4px;
+}
+
+.brand-icon {
+    display: inline-flex;
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #4f46e5, #06b6d4);
+    font-size: 22px;
+    margin-right: 10px;
+    vertical-align: middle;
+}
+
+.brand-name {
+    font-size: 22px;
+    font-weight: 800;
+    color: #ffffff !important;
+    vertical-align: middle;
+}
+
+.brand-sub {
+    color: #8290a8 !important;
+    font-size: 12px;
+    margin-top: 8px;
+    line-height: 1.5;
+}
+
 .hero {
     position: relative;
     overflow: hidden;
@@ -74,6 +114,7 @@ html, body, [class*="css"] {
         linear-gradient(135deg, #08111f, #172554 58%, #312e81);
     box-shadow: 0 20px 60px rgba(15,23,42,.18);
     border: 1px solid rgba(255,255,255,.08);
+    color: white;
 }
 
 .hero:after {
@@ -164,18 +205,46 @@ html, body, [class*="css"] {
     margin-top: 5px;
 }
 
+.card {
+    background: #ffffff;
+    border: 1px solid #e7ebf2;
+    border-radius: 18px;
+    padding: 20px;
+    box-shadow: 0 7px 22px rgba(15, 23, 42, .04);
+}
+
 .insight {
-    min-height: 130px;
+    min-height: 120px;
     padding: 18px 20px;
     border-radius: 17px;
     background: white;
     border: 1px solid #e7ebf2;
+    border-left: 4px solid #4f46e5;
     box-shadow: 0 8px 25px rgba(15,23,42,.05);
     color: #475569;
+    font-size: 13px;
+    line-height: 1.6;
 }
 
 .insight b {
     color: #0f172a;
+}
+
+.status {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: #10b981;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    background: #10b981;
+    border-radius: 50%;
+    display: inline-block;
 }
 
 div[data-testid="stMetric"] {
@@ -239,241 +308,9 @@ footer {
     }
 }
 </style>
-""", unsafe_allow_html=True)
-
-
-# =========================================================
-# PAGE CONFIG
-# =========================================================
-st.set_page_config(
-    page_title="ChurnIQ | Customer Intelligence",
-    page_icon="📊",
-    layout="wide",
-    initial_sidebar_state="expanded",
+""",
+    unsafe_allow_html=True,
 )
-
-# =========================================================
-# PROFESSIONAL UI
-# =========================================================
-st.markdown("""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
-    html, body, [class*="css"] {
-        font-family: 'Inter', sans-serif;
-    }
-
-    .stApp {
-        background: #f5f7fb;
-    }
-
-    [data-testid="stSidebar"] {
-        background: #0b1220;
-        border-right: 1px solid #1d2940;
-    }
-
-    [data-testid="stSidebar"] * {
-        color: #dce5f5 !important;
-    }
-
-    [data-testid="stSidebar"] .stRadio > div {
-        gap: 8px;
-    }
-
-    [data-testid="stSidebar"] label {
-        background: transparent;
-        border-radius: 10px;
-        padding: 8px 10px;
-        font-weight: 500;
-    }
-
-    .brand {
-        padding: 8px 4px 24px 4px;
-    }
-
-    .brand-icon {
-        display: inline-flex;
-        width: 42px;
-        height: 42px;
-        border-radius: 12px;
-        align-items: center;
-        justify-content: center;
-        background: linear-gradient(135deg, #4f46e5, #06b6d4);
-        font-size: 22px;
-        margin-right: 10px;
-        vertical-align: middle;
-    }
-
-    .brand-name {
-        font-size: 22px;
-        font-weight: 800;
-        color: #ffffff !important;
-        vertical-align: middle;
-    }
-
-    .brand-sub {
-        color: #8290a8 !important;
-        font-size: 12px;
-        margin-top: 8px;
-        line-height: 1.5;
-    }
-
-    .hero {
-        background: linear-gradient(135deg, #111827 0%, #172554 55%, #0f766e 100%);
-        border-radius: 22px;
-        padding: 30px 34px;
-        color: white;
-        margin-bottom: 22px;
-        box-shadow: 0 16px 35px rgba(15, 23, 42, .12);
-    }
-
-    .hero h1 {
-        margin: 0;
-        font-size: 34px;
-        font-weight: 800;
-        letter-spacing: -1px;
-    }
-
-    .hero p {
-        margin: 8px 0 0 0;
-        color: #cbd5e1;
-        font-size: 14px;
-    }
-
-    .hero-badge {
-        display: inline-block;
-        margin-top: 18px;
-        padding: 7px 12px;
-        border: 1px solid rgba(255,255,255,.18);
-        background: rgba(255,255,255,.08);
-        border-radius: 999px;
-        font-size: 12px;
-        color: #e2e8f0;
-    }
-
-    .section-title {
-        font-size: 19px;
-        font-weight: 700;
-        color: #111827;
-        margin: 8px 0 14px 0;
-    }
-
-    .section-caption {
-        color: #64748b;
-        font-size: 13px;
-        margin-top: -8px;
-        margin-bottom: 16px;
-    }
-
-    .metric-card {
-        background: #ffffff;
-        border: 1px solid #e7ebf2;
-        border-radius: 16px;
-        padding: 18px 18px 16px 18px;
-        min-height: 122px;
-        box-shadow: 0 7px 22px rgba(15, 23, 42, .05);
-    }
-
-    .metric-label {
-        color: #64748b;
-        font-size: 12px;
-        font-weight: 600;
-        margin-bottom: 9px;
-    }
-
-    .metric-value {
-        color: #111827;
-        font-size: 27px;
-        font-weight: 800;
-        letter-spacing: -.5px;
-    }
-
-    .metric-note {
-        color: #94a3b8;
-        font-size: 11px;
-        margin-top: 7px;
-    }
-
-    .card {
-        background: #ffffff;
-        border: 1px solid #e7ebf2;
-        border-radius: 18px;
-        padding: 20px;
-        box-shadow: 0 7px 22px rgba(15, 23, 42, .04);
-    }
-
-    .risk-high {
-        color: #dc2626;
-        font-weight: 700;
-    }
-
-    .risk-medium {
-        color: #d97706;
-        font-weight: 700;
-    }
-
-    .risk-low {
-        color: #059669;
-        font-weight: 700;
-    }
-
-    .insight {
-        background: #eef6ff;
-        border-left: 4px solid #4f46e5;
-        border-radius: 10px;
-        padding: 14px 16px;
-        color: #334155;
-        font-size: 13px;
-        line-height: 1.6;
-        margin-top: 8px;
-    }
-
-    .status {
-        display: inline-flex;
-        align-items: center;
-        gap: 7px;
-        color: #10b981;
-        font-size: 12px;
-        font-weight: 600;
-    }
-
-    .status-dot {
-        width: 8px;
-        height: 8px;
-        background: #10b981;
-        border-radius: 50%;
-        display: inline-block;
-    }
-
-    .footer {
-        margin-top: 36px;
-        padding: 18px 0 8px 0;
-        border-top: 1px solid #e2e8f0;
-        color: #94a3b8;
-        font-size: 11px;
-        text-align: center;
-    }
-
-    div[data-testid="stDataFrame"] {
-        border-radius: 12px;
-        overflow: hidden;
-    }
-
-    .stButton > button {
-        border-radius: 10px;
-        font-weight: 600;
-    }
-
-    @media (max-width: 900px) {
-        .hero h1 {
-            font-size: 27px;
-        }
-    }
-</style>
-""", unsafe_allow_html=True)
-
-
-
 
 # =========================================================
 # PROJECT PATHS
@@ -546,7 +383,8 @@ if "auth_user" not in st.session_state:
     st.session_state.auth_user = None
 
 if not st.session_state.authenticated:
-    st.markdown("""
+    st.markdown(
+        """
     <div style="
         min-height:78vh;
         display:flex;
@@ -579,7 +417,9 @@ if not st.session_state.authenticated:
       </div>
     </div>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
     _, auth_col, _ = st.columns([1.2, 1, 1.2])
     with auth_col:
@@ -588,9 +428,13 @@ if not st.session_state.authenticated:
         with login_tab:
             st.markdown("### Welcome back")
             login_email = st.text_input("Email", key="login_email")
-            login_password = st.text_input("Password", type="password", key="login_password")
+            login_password = st.text_input(
+                "Password", type="password", key="login_password"
+            )
 
-            if st.button("Sign In to ChurnIQ", use_container_width=True, type="primary"):
+            if st.button(
+                "Sign In to ChurnIQ", use_container_width=True, type="primary"
+            ):
                 if not valid_email(login_email):
                     st.error("Enter a valid email address.")
                 elif not login_password:
@@ -613,8 +457,12 @@ if not st.session_state.authenticated:
             st.markdown("### Create your account")
             reg_name = st.text_input("Full name", key="reg_name")
             reg_email = st.text_input("Email address", key="reg_email")
-            reg_password = st.text_input("Password", type="password", key="reg_password")
-            reg_confirm = st.text_input("Confirm password", type="password", key="reg_confirm")
+            reg_password = st.text_input(
+                "Password", type="password", key="reg_password"
+            )
+            reg_confirm = st.text_input(
+                "Confirm password", type="password", key="reg_confirm"
+            )
 
             if st.button("Create ChurnIQ Account", use_container_width=True):
                 if not reg_name.strip():
@@ -626,17 +474,22 @@ if not st.session_state.authenticated:
                 elif reg_password != reg_confirm:
                     st.error("Passwords do not match.")
                 else:
-                    ok, message = create_user(reg_name, reg_email, reg_password)
+                    ok, message = create_user(
+                        reg_name, reg_email, reg_password
+                    )
                     if ok:
                         st.success(message + " You can now sign in.")
                     else:
                         st.error(message)
 
-    st.markdown("""
+    st.markdown(
+        """
     <div style="text-align:center;color:#94a3b8;font-size:11px;margin-top:5px;">
         Local demo authentication • Passwords are stored as hashes
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
     st.stop()
 
 # =========================================================
@@ -646,7 +499,8 @@ if "workspace_started" not in st.session_state:
     st.session_state.workspace_started = True
 
 if not st.session_state.workspace_started:
-    st.markdown("""
+    st.markdown(
+        """
     <div style="
         min-height:78vh;
         display:flex;
@@ -704,24 +558,33 @@ if not st.session_state.workspace_started:
         </div>
     </div>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
     _, center, _ = st.columns([2, 1, 2])
     with center:
-        if st.button("🚀 Enter Analytics Workspace", use_container_width=True, type="primary"):
+        if st.button(
+            "🚀 Enter Analytics Workspace",
+            use_container_width=True,
+            type="primary",
+        ):
             st.session_state.workspace_started = True
             st.rerun()
 
-    st.markdown("""
+    st.markdown(
+        """
     <div style="text-align:center;color:#94a3b8;font-size:11px;margin-top:8px;">
         ChurnIQ v1.0 • Customer Intelligence
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
     st.stop()
 
 # =========================================================
-# DATA
+# DATA LOADING
 # =========================================================
 @st.cache_data
 def load_data():
@@ -793,11 +656,211 @@ def page_header(title, description, icon):
     )
 
 
+def executive_metric(label, value, subtitle):
+    return f"""
+    <div class="metric-card">
+        <div class="metric-label">{label}</div>
+        <div class="metric-value">{value}</div>
+        <div class="metric-note">{subtitle}</div>
+    </div>
+    """
+
+
+def build_churn_trend(data):
+    candidates = ["month", "date", "signup_date", "cohort_month"]
+    date_col = next((c for c in candidates if c in data.columns), None)
+
+    if date_col:
+        temp = data.copy()
+        temp["_date"] = pd.to_datetime(temp[date_col], errors="coerce")
+        temp = temp.dropna(subset=["_date"])
+        if not temp.empty:
+            trend = (
+                temp.assign(period=temp["_date"].dt.to_period("M").astype(str))
+                .groupby("period")
+                .agg(
+                    customers=("customer_id", "count"),
+                    churned=("churn", lambda x: (x == "Yes").sum()),
+                )
+                .reset_index()
+            )
+            trend["churn_rate"] = trend["churned"] / trend["customers"] * 100
+            return trend
+
+    temp = data.copy()
+    temp["tenure_band"] = pd.cut(
+        temp["tenure_months"],
+        bins=[-1, 6, 12, 24, 36, 60, float("inf")],
+        labels=["0–6 mo", "7–12 mo", "13–24 mo", "25–36 mo", "37–60 mo", "60+ mo"],
+    )
+    trend = (
+        temp.groupby("tenure_band", observed=False)
+        .agg(
+            customers=("customer_id", "count"),
+            churned=("churn", lambda x: (x == "Yes").sum()),
+        )
+        .reset_index()
+    )
+    trend["churn_rate"] = trend["churned"] / trend["customers"] * 100
+    return trend
+
+
+def retention_recommendation(row):
+    risk = str(row.get("risk_level", ""))
+    contract = str(row.get("contract_type", ""))
+    monthly = float(row.get("monthly_charges", 0) or 0)
+    tenure = float(row.get("tenure_months", 0) or 0)
+    probability = float(row.get("churn_probability", 0) or 0)
+
+    actions = []
+
+    if risk == "High Risk" or probability >= 70:
+        actions.append("Immediate retention outreach")
+    elif risk == "Medium Risk" or probability >= 40:
+        actions.append("Proactive engagement campaign")
+    else:
+        actions.append("Maintain engagement")
+
+    if contract.lower() in {"month-to-month", "monthly"}:
+        actions.append("Offer longer-term contract incentive")
+
+    if monthly >= 80:
+        actions.append("Prioritize premium/high-value support")
+
+    if tenure <= 12:
+        actions.append("Run onboarding & early-lifecycle campaign")
+
+    if not actions:
+        actions.append("Standard customer engagement")
+
+    return " • ".join(dict.fromkeys(actions))
+
+
+def safe_numeric(series):
+    return pd.to_numeric(series, errors="coerce").fillna(0)
+
+
+def make_rfm_view(data):
+    temp = data.copy()
+
+    temp["rfm_recency"] = 1 / (1 + safe_numeric(temp["tenure_months"]))
+    temp["rfm_frequency"] = safe_numeric(
+        temp.get("total_transactions", pd.Series(1, index=temp.index))
+    )
+    temp["rfm_monetary"] = safe_numeric(temp["total_charges"])
+
+    def quintile_score(series, reverse=False):
+        if series.nunique() <= 1:
+            return pd.Series(3, index=series.index)
+
+        ranked = series.rank(method="first")
+        score = (
+            pd.qcut(ranked, 5, labels=False, duplicates="drop") + 1
+        )
+
+        if reverse:
+            score = 6 - score
+
+        return score.astype(int)
+
+    temp["R"] = quintile_score(temp["rfm_recency"], reverse=False)
+    temp["F"] = quintile_score(temp["rfm_frequency"], reverse=False)
+    temp["M"] = quintile_score(temp["rfm_monetary"], reverse=False)
+
+    temp["RFM Score"] = temp[["R", "F", "M"]].sum(axis=1)
+
+    def segment(score):
+        if score >= 13:
+            return "Champions"
+        if score >= 10:
+            return "Loyal Customers"
+        if score >= 7:
+            return "Potential Loyalists"
+        if score >= 5:
+            return "At Risk"
+        return "Needs Attention"
+
+    temp["RFM Segment"] = temp["RFM Score"].apply(segment)
+    return temp
+
+
+def assistant_local_answer(question, data):
+    q = question.lower().strip()
+
+    total = len(data)
+    churned = int((data["churn"] == "Yes").sum())
+    churn_rate = churned / total * 100 if total else 0
+    high = data[data["risk_level"] == "High Risk"]
+    medium = data[data["risk_level"] == "Medium Risk"]
+
+    if any(x in q for x in ["high risk", "high-risk"]):
+        return (
+            f"### 🔴 High-Risk Customers\n"
+            f"There are **{len(high):,} high-risk customers** in the current portfolio. "
+            f"Their combined revenue exposure is **{money(high['total_charges'].sum())}**."
+        )
+
+    if "medium risk" in q:
+        return (
+            f"### 🟠 Medium-Risk Customers\n"
+            f"There are **{len(medium):,} medium-risk customers**. "
+            f"Consider proactive engagement before they move into the high-risk segment."
+        )
+
+    if "churn rate" in q or "churn percentage" in q:
+        return (
+            f"### 📉 Churn Rate\n"
+            f"The current portfolio churn rate is **{churn_rate:.2f}%** "
+            f"({churned:,} churned customers out of {total:,})."
+        )
+
+    if "revenue" in q and ("risk" in q or "at risk" in q):
+        return (
+            f"### 💰 Revenue at Risk\n"
+            f"High-risk customers represent approximately **{money(high['total_charges'].sum())}** "
+            f"in total-charge exposure."
+        )
+
+    if "customer" in q and ("total" in q or "how many" in q or "count" in q):
+        return f"### 👥 Customer Base\nThere are **{total:,} customers** in the current dataset."
+
+    if "recommend" in q or "retention" in q or "retain" in q:
+        return (
+            "### 🎯 Retention Strategy\n"
+            "1. Prioritize high-risk, high-value customers.\n"
+            "2. Contact month-to-month customers with suitable long-term-plan incentives.\n"
+            "3. Give premium support to high-value customers.\n"
+            "4. Use onboarding campaigns for customers with short tenure.\n"
+            "5. Monitor medium-risk customers before they become high risk."
+        )
+
+    if "city" in q or "location" in q:
+        if "city" in data.columns and len(high):
+            city = high.groupby("city")["total_charges"].sum().sort_values(ascending=False)
+            if len(city):
+                return (
+                    f"### 📍 Risk Concentration\n"
+                    f"**{city.index[0]}** has the highest high-risk revenue exposure "
+                    f"at approximately **{money(city.iloc[0])}**."
+                )
+
+    return (
+        "### 🤖 ChurnIQ Assistant\n"
+        "I can analyze the current customer dataset. Try asking:\n\n"
+        "- **How many high-risk customers do we have?**\n"
+        "- **What is our churn rate?**\n"
+        "- **How much revenue is at risk?**\n"
+        "- **Which city has the highest risk?**\n"
+        "- **What retention strategy do you recommend?**"
+    )
+
+
 # =========================================================
 # SIDEBAR
 # =========================================================
 with st.sidebar:
-    st.markdown("""
+    st.markdown(
+        """
     <div class="brand">
         <div>
             <span class="brand-icon">📊</span>
@@ -808,7 +871,9 @@ with st.sidebar:
             Predict • Segment • Retain
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
     st.markdown(
         '<div class="status"><span class="status-dot"></span> Analytics engine online</div>',
@@ -852,63 +917,8 @@ with st.sidebar:
         st.rerun()
 
 
-
 # =========================================================
-# EXECUTIVE DASHBOARD HELPERS
-# =========================================================
-def executive_metric(label, value, subtitle):
-    return f"""
-    <div class="metric-card">
-        <div class="metric-label">{label}</div>
-        <div class="metric-value">{value}</div>
-        <div class="metric-note">{subtitle}</div>
-    </div>
-    """
-
-
-def build_churn_trend(data):
-    # Use available date/month-like columns when present.
-    candidates = ["month", "date", "signup_date", "cohort_month"]
-    date_col = next((c for c in candidates if c in data.columns), None)
-
-    if date_col:
-        temp = data.copy()
-        temp["_date"] = pd.to_datetime(temp[date_col], errors="coerce")
-        temp = temp.dropna(subset=["_date"])
-        if not temp.empty:
-            trend = (
-                temp.assign(period=temp["_date"].dt.to_period("M").astype(str))
-                .groupby("period")
-                .agg(
-                    customers=("customer_id", "count"),
-                    churned=("churn", lambda x: (x == "Yes").sum()),
-                )
-                .reset_index()
-            )
-            trend["churn_rate"] = trend["churned"] / trend["customers"] * 100
-            return trend
-
-    # Fallback: tenure-based analytical view, which works with the current dataset.
-    temp = data.copy()
-    temp["tenure_band"] = pd.cut(
-        temp["tenure_months"],
-        bins=[-1, 6, 12, 24, 36, 60, float("inf")],
-        labels=["0–6 mo", "7–12 mo", "13–24 mo", "25–36 mo", "37–60 mo", "60+ mo"],
-    )
-    trend = (
-        temp.groupby("tenure_band", observed=False)
-        .agg(
-            customers=("customer_id", "count"),
-            churned=("churn", lambda x: (x == "Yes").sum()),
-        )
-        .reset_index()
-    )
-    trend["churn_rate"] = trend["churned"] / trend["customers"] * 100
-    return trend
-
-
-# =========================================================
-# EXECUTIVE DASHBOARD
+# PAGE 1: EXECUTIVE DASHBOARD OVERVIEW
 # =========================================================
 if page == "📊 Overview":
     user_name = st.session_state.get("auth_user", {}).get("name", "there")
@@ -934,16 +944,21 @@ if page == "📊 Overview":
     with filter_cols[0]:
         city_options = (
             ["All"] + sorted(df["city"].dropna().astype(str).unique().tolist())
-            if "city" in df.columns else ["All"]
+            if "city" in df.columns
+            else ["All"]
         )
         selected_city = st.selectbox("City", city_options, key="exec_city")
 
     with filter_cols[1]:
         contract_options = (
-            ["All"] + sorted(df["contract_type"].dropna().astype(str).unique().tolist())
-            if "contract_type" in df.columns else ["All"]
+            ["All"]
+            + sorted(df["contract_type"].dropna().astype(str).unique().tolist())
+            if "contract_type" in df.columns
+            else ["All"]
         )
-        selected_contract = st.selectbox("Contract", contract_options, key="exec_contract")
+        selected_contract = st.selectbox(
+            "Contract", contract_options, key="exec_contract"
+        )
 
     with filter_cols[2]:
         selected_period = st.selectbox(
@@ -958,7 +973,9 @@ if page == "📊 Overview":
         filtered = filtered[filtered["city"].astype(str) == selected_city]
 
     if selected_contract != "All" and "contract_type" in filtered.columns:
-        filtered = filtered[filtered["contract_type"].astype(str) == selected_contract]
+        filtered = filtered[
+            filtered["contract_type"].astype(str) == selected_contract
+        ]
 
     if selected_period == "High Risk Focus":
         filtered = filtered[filtered["risk_level"] == "High Risk"]
@@ -970,7 +987,9 @@ if page == "📊 Overview":
     churn_rate = (churned / total_customers * 100) if total_customers else 0
     high_risk_df = filtered[filtered["risk_level"] == "High Risk"]
     revenue_risk = high_risk_df["total_charges"].sum()
-    avg_probability = filtered["churn_probability"].mean() if total_customers else 0
+    avg_probability = (
+        filtered["churn_probability"].mean() if total_customers else 0
+    )
 
     st.markdown(
         "<div class='section-title'>Executive Snapshot</div>",
@@ -1107,7 +1126,9 @@ if page == "📊 Overview":
         "churn_probability",
         "risk_level",
     ]
-    priority_columns = [c for c in priority_columns if c in high_risk_df.columns]
+    priority_columns = [
+        c for c in priority_columns if c in high_risk_df.columns
+    ]
 
     priority = (
         high_risk_df[priority_columns]
@@ -1125,7 +1146,7 @@ if page == "📊 Overview":
         hide_index=True,
     )
 
-    # AI-style management insights
+    # Management insights
     st.markdown(
         "<div class='section-title'>💡 Management Insights</div>",
         unsafe_allow_html=True,
@@ -1178,43 +1199,345 @@ if page == "📊 Overview":
         )
 
 
+# =========================================================
+# PAGE 2: RFM SEGMENTATION
+# =========================================================
+elif page == "👥 RFM Segmentation":
+    st.markdown(
+        """
+        <div class="hero">
+            <div style="font-size:12px;color:#93c5fd;font-weight:700;
+                        letter-spacing:1px;text-transform:uppercase;">
+                CUSTOMER SEGMENTATION
+            </div>
+            <h1 style="margin-top:8px;">RFM Intelligence</h1>
+            <p>Segment customers by behavioral value and identify where retention effort should be focused.</p>
+            <span class="hero-badge">● Recency • Frequency • Monetary analysis</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    rfm = make_rfm_view(df)
+    rfm["total_charges"] = pd.to_numeric(
+        rfm["total_charges"], errors="coerce"
+    ).fillna(0)
+
+    segment_summary = (
+        rfm.groupby("RFM Segment")
+        .agg(
+            customers=("customer_id", "count"),
+            revenue=("total_charges", "sum"),
+            avg_churn_probability=("churn_probability", "mean"),
+        )
+        .reset_index()
+        .sort_values("revenue", ascending=False)
+    )
+
+    a, b, c, d = st.columns(4)
+    with a:
+        st.metric("Customers", f"{len(rfm):,}")
+    with b:
+        st.metric("Segments", f"{rfm['RFM Segment'].nunique():,}")
+    with c:
+        st.metric(
+            "At-Risk Segment", f"{(rfm['RFM Segment'] == 'At Risk').sum():,}"
+        )
+    with d:
+        champions_revenue = segment_summary.loc[
+            segment_summary["RFM Segment"] == "Champions", "revenue"
+        ].sum()
+        st.metric("Champion Revenue", money(champions_revenue))
+
+    left, right = st.columns([1.1, 1])
+
+    with left:
+        st.markdown(
+            "<div class='section-title'>📊 Customer Value Segments</div>",
+            unsafe_allow_html=True,
+        )
+        fig = px.bar(
+            segment_summary,
+            x="RFM Segment",
+            y="customers",
+            text="customers",
+        )
+        fig.update_layout(
+            title="Customers by RFM segment",
+            xaxis_title="Segment",
+            yaxis_title="Customers",
+        )
+        st.plotly_chart(
+            chart_layout(fig, 410),
+            use_container_width=True,
+            config={"displayModeBar": False},
+        )
+
+    with right:
+        st.markdown(
+            "<div class='section-title'>💰 Revenue by Segment</div>",
+            unsafe_allow_html=True,
+        )
+
+        pie_labels = segment_summary["RFM Segment"].astype(str).tolist()
+
+        pie_values = (
+            pd.to_numeric(
+                segment_summary["revenue"],
+                errors="coerce",
+            )
+            .fillna(0)
+            .tolist()
+        )
+
+        fig = px.pie(
+            names=pie_labels,
+            values=pie_values,
+            hole=0.58,
+        )
+
+        fig.update_traces(
+            texttemplate="%{percent:.1%}",
+            textinfo="text",
+            hovertemplate=(
+                "<b>%{label}</b><br>"
+                "Revenue: ₹%{value:,.0f}<br>"
+                "Share: %{percent}<extra></extra>"
+            ),
+        )
+
+        fig.update_layout(
+            showlegend=True,
+            legend=dict(
+                orientation="h",
+                y=-0.18,
+            ),
+        )
+
+        st.plotly_chart(
+            chart_layout(fig, 410),
+            use_container_width=True,
+            config={"displayModeBar": False},
+        )
+
+    st.markdown(
+        "<div class='section-title'>🧭 Segment Performance</div>",
+        unsafe_allow_html=True,
+    )
+    segment_table = segment_summary.copy()
+    segment_table["revenue"] = segment_table["revenue"].round(2)
+    segment_table["avg_churn_probability"] = segment_table[
+        "avg_churn_probability"
+    ].round(2)
+    st.dataframe(segment_table, use_container_width=True, hide_index=True)
+
+    st.markdown(
+        "<div class='section-title'>🔎 Customer-Level RFM</div>",
+        unsafe_allow_html=True,
+    )
+
+    segment_filter = st.selectbox(
+        "Select RFM Segment",
+        ["All"] + sorted(rfm["RFM Segment"].unique().tolist()),
+        key="rfm_segment_filter",
+    )
+
+    rfm_filtered = (
+        rfm
+        if segment_filter == "All"
+        else rfm[rfm["RFM Segment"] == segment_filter]
+    )
+
+    rfm_columns = [
+        "customer_id",
+        "R",
+        "F",
+        "M",
+        "RFM Score",
+        "RFM Segment",
+        "churn_probability",
+        "risk_level",
+        "total_charges",
+    ]
+    rfm_columns = [c for c in rfm_columns if c in rfm_filtered.columns]
+
+    rfm_display = rfm_filtered[rfm_columns].sort_values(
+        "RFM Score", ascending=False
+    ).head(20)
+
+    st.dataframe(
+        rfm_display,
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    rfm_csv = rfm_filtered[rfm_columns].to_csv(index=False).encode("utf-8")
+    st.download_button(
+        "📥 Export RFM Analysis",
+        data=rfm_csv,
+        file_name="churniq_rfm_analysis.csv",
+        mime="text/csv",
+    )
 
 
 # =========================================================
-# RETENTION RECOMMENDATION ENGINE
+# PAGE 3: COHORT ANALYSIS
 # =========================================================
-def retention_recommendation(row):
-    risk = str(row.get("risk_level", ""))
-    contract = str(row.get("contract_type", ""))
-    monthly = float(row.get("monthly_charges", 0) or 0)
-    tenure = float(row.get("tenure_months", 0) or 0)
-    probability = float(row.get("churn_probability", 0) or 0)
+elif page == "📅 Cohort Analysis":
+    st.markdown(
+        """
+        <div class="hero">
+            <div style="font-size:12px;color:#93c5fd;font-weight:700;
+                        letter-spacing:1px;text-transform:uppercase;">
+                RETENTION ANALYTICS
+            </div>
+            <h1 style="margin-top:8px;">Cohort Retention Intelligence</h1>
+            <p>Compare customer groups over their lifecycle and identify retention patterns.</p>
+            <span class="hero-badge">● Cohort-based retention monitoring</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    actions = []
+    cohort = df.copy()
 
-    if risk == "High Risk" or probability >= 70:
-        actions.append("Immediate retention outreach")
-    elif risk == "Medium Risk" or probability >= 40:
-        actions.append("Proactive engagement campaign")
+    date_candidates = ["signup_date", "join_date", "date", "cohort_month"]
+    date_col = next((c for c in date_candidates if c in cohort.columns), None)
+
+    if date_col:
+        cohort["_cohort_date"] = pd.to_datetime(
+            cohort[date_col], errors="coerce"
+        )
+        cohort = cohort.dropna(subset=["_cohort_date"])
+        cohort["Cohort"] = cohort["_cohort_date"].dt.to_period("M").astype(str)
     else:
-        actions.append("Maintain engagement")
+        cohort["Cohort"] = pd.cut(
+            safe_numeric(cohort["tenure_months"]),
+            bins=[-1, 3, 6, 12, 24, 36, 60, float("inf")],
+            labels=[
+                "0–3 mo",
+                "4–6 mo",
+                "7–12 mo",
+                "13–24 mo",
+                "25–36 mo",
+                "37–60 mo",
+                "60+ mo",
+            ],
+        ).astype(str)
 
-    if contract.lower() in {"month-to-month", "monthly"}:
-        actions.append("Offer longer-term contract incentive")
+    cohort_summary = (
+        cohort.groupby("Cohort", observed=False)
+        .agg(
+            customers=("customer_id", "count"),
+            churned=("churn", lambda x: (x == "Yes").sum()),
+            revenue=("total_charges", "sum"),
+            avg_churn_probability=("churn_probability", "mean"),
+        )
+        .reset_index()
+    )
+    cohort_summary["retention_rate"] = (
+        1 - cohort_summary["churned"] / cohort_summary["customers"]
+    ) * 100
 
-    if monthly >= 80:
-        actions.append("Prioritize premium/high-value support")
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        st.metric("Cohorts", f"{len(cohort_summary):,}")
+    with c2:
+        st.metric(
+            "Avg. Retention", f"{cohort_summary['retention_rate'].mean():.1f}%"
+        )
+    with c3:
+        best_idx = cohort_summary["retention_rate"].idxmax()
+        st.metric("Best Cohort", str(cohort_summary.loc[best_idx, "Cohort"]))
+    with c4:
+        st.metric("Cohort Revenue", money(cohort_summary["revenue"].sum()))
 
-    if tenure <= 12:
-        actions.append("Run onboarding & early-lifecycle campaign")
+    left, right = st.columns([1.15, 1])
 
-    if not actions:
-        actions.append("Standard customer engagement")
+    with left:
+        st.markdown(
+            "<div class='section-title'>📈 Retention by Cohort</div>",
+            unsafe_allow_html=True,
+        )
 
-    return " • ".join(dict.fromkeys(actions))
+        fig = px.line(
+            cohort_summary,
+            x="Cohort",
+            y="retention_rate",
+            markers=True,
+        )
+        fig.update_layout(
+            title="Cohort retention rate",
+            xaxis_title="Cohort",
+            yaxis_title="Retention (%)",
+        )
+        st.plotly_chart(
+            chart_layout(fig, 410),
+            use_container_width=True,
+            config={"displayModeBar": False},
+        )
+
+    with right:
+        st.markdown(
+            "<div class='section-title'>👥 Cohort Size</div>",
+            unsafe_allow_html=True,
+        )
+
+        fig = px.bar(
+            cohort_summary,
+            x="Cohort",
+            y="customers",
+            text="customers",
+        )
+        fig.update_layout(
+            title="Customers by cohort",
+            xaxis_title="Cohort",
+            yaxis_title="Customers",
+        )
+        st.plotly_chart(
+            chart_layout(fig, 410),
+            use_container_width=True,
+            config={"displayModeBar": False},
+        )
+
+    st.markdown(
+        "<div class='section-title'>🧩 Cohort Performance Matrix</div>",
+        unsafe_allow_html=True,
+    )
+
+    matrix = cohort_summary[
+        [
+            "Cohort",
+            "customers",
+            "churned",
+            "retention_rate",
+            "revenue",
+            "avg_churn_probability",
+        ]
+    ].copy()
+
+    matrix["retention_rate"] = matrix["retention_rate"].round(2)
+    matrix["avg_churn_probability"] = matrix["avg_churn_probability"].round(2)
+
+    st.dataframe(
+        matrix,
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    cohort_csv = matrix.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        "📥 Export Cohort Report",
+        data=cohort_csv,
+        file_name="churniq_cohort_analysis.csv",
+        mime="text/csv",
+    )
 
 
-if page == "🧠 Churn Prediction":
+# =========================================================
+# PAGE 4: CHURN PREDICTION & RETENTION ENGINE
+# =========================================================
+elif page == "🤖 Churn Prediction":
     st.markdown(
         """
         <div class="hero">
@@ -1230,7 +1553,6 @@ if page == "🧠 Churn Prediction":
         unsafe_allow_html=True,
     )
 
-    # Summary metrics
     high = df[df["risk_level"] == "High Risk"]
     medium = df[df["risk_level"] == "Medium Risk"]
 
@@ -1242,9 +1564,17 @@ if page == "🧠 Churn Prediction":
     with c3:
         st.metric("High-Risk Revenue", money(high["total_charges"].sum()))
     with c4:
-        st.metric("Avg. High-Risk Probability", f"{high['churn_probability'].mean():.1f}%" if len(high) else "0.0%")
+        st.metric(
+            "Avg. High-Risk Probability",
+            f"{high['churn_probability'].mean():.1f}%"
+            if len(high)
+            else "0.0%",
+        )
 
-    st.markdown("<div class='section-title'>🎯 Customer Retention Queue</div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div class='section-title'>🎯 Customer Retention Queue</div>",
+        unsafe_allow_html=True,
+    )
 
     risk_filter = st.selectbox(
         "Risk level",
@@ -1257,16 +1587,21 @@ if page == "🧠 Churn Prediction":
     elif risk_filter == "Medium Risk":
         retention_df = df[df["risk_level"] == "Medium Risk"].copy()
     else:
-        retention_df = df[df["risk_level"].isin(["High Risk", "Medium Risk"])].copy()
+        retention_df = df[
+            df["risk_level"].isin(["High Risk", "Medium Risk"])
+        ].copy()
 
-    retention_df["recommendation"] = retention_df.apply(retention_recommendation, axis=1)
+    retention_df["recommendation"] = retention_df.apply(
+        retention_recommendation, axis=1
+    )
     retention_df["priority_score"] = (
         retention_df["churn_probability"] * 0.65
         + (
             retention_df["total_charges"]
             / max(float(df["total_charges"].max()), 1)
             * 100
-        ) * 0.35
+        )
+        * 0.35
     )
 
     retention_df = retention_df.sort_values("priority_score", ascending=False)
@@ -1286,7 +1621,9 @@ if page == "🧠 Churn Prediction":
 
     display_df = retention_df[show_cols].head(15).copy()
     if "churn_probability" in display_df.columns:
-        display_df["churn_probability"] = display_df["churn_probability"].round(2)
+        display_df["churn_probability"] = display_df[
+            "churn_probability"
+        ].round(2)
 
     st.dataframe(
         display_df,
@@ -1294,7 +1631,10 @@ if page == "🧠 Churn Prediction":
         hide_index=True,
     )
 
-    st.markdown("<div class='section-title'>⚡ Recommended Action Plan</div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div class='section-title'>⚡ Recommended Action Plan</div>",
+        unsafe_allow_html=True,
+    )
 
     action_cols = st.columns(3)
 
@@ -1334,7 +1674,6 @@ if page == "🧠 Churn Prediction":
             unsafe_allow_html=True,
         )
 
-    # Exportable retention queue
     csv_data = retention_df[show_cols].to_csv(index=False).encode("utf-8")
     st.download_button(
         "📥 Export Retention Queue",
@@ -1345,480 +1684,10 @@ if page == "🧠 Churn Prediction":
     )
 
 
-
-
 # =========================================================
-# AI BUSINESS ASSISTANT
+# PAGE 5: REVENUE AT RISK
 # =========================================================
-def assistant_local_answer(question, data):
-    q = question.lower().strip()
-
-    total = len(data)
-    churned = int((data["churn"] == "Yes").sum())
-    churn_rate = churned / total * 100 if total else 0
-    high = data[data["risk_level"] == "High Risk"]
-    medium = data[data["risk_level"] == "Medium Risk"]
-
-    if any(x in q for x in ["high risk", "high-risk"]):
-        return (
-            f"### 🔴 High-Risk Customers\n"
-            f"There are **{len(high):,} high-risk customers** in the current portfolio. "
-            f"Their combined revenue exposure is **{money(high['total_charges'].sum())}**."
-        )
-
-    if "medium risk" in q:
-        return (
-            f"### 🟠 Medium-Risk Customers\n"
-            f"There are **{len(medium):,} medium-risk customers**. "
-            f"Consider proactive engagement before they move into the high-risk segment."
-        )
-
-    if "churn rate" in q or "churn percentage" in q:
-        return (
-            f"### 📉 Churn Rate\n"
-            f"The current portfolio churn rate is **{churn_rate:.2f}%** "
-            f"({churned:,} churned customers out of {total:,})."
-        )
-
-    if "revenue" in q and ("risk" in q or "at risk" in q):
-        return (
-            f"### 💰 Revenue at Risk\n"
-            f"High-risk customers represent approximately **{money(high['total_charges'].sum())}** "
-            f"in total-charge exposure."
-        )
-
-    if "customer" in q and ("total" in q or "how many" in q or "count" in q):
-        return f"### 👥 Customer Base\nThere are **{total:,} customers** in the current dataset."
-
-    if "recommend" in q or "retention" in q or "retain" in q:
-        return (
-            "### 🎯 Retention Strategy\n"
-            "1. Prioritize high-risk, high-value customers.\n"
-            "2. Contact month-to-month customers with suitable long-term-plan incentives.\n"
-            "3. Give premium support to high-value customers.\n"
-            "4. Use onboarding campaigns for customers with short tenure.\n"
-            "5. Monitor medium-risk customers before they become high risk."
-        )
-
-    if "city" in q or "location" in q:
-        if "city" in data.columns and len(high):
-            city = high.groupby("city")["total_charges"].sum().sort_values(ascending=False)
-            if len(city):
-                return (
-                    f"### 📍 Risk Concentration\n"
-                    f"**{city.index[0]}** has the highest high-risk revenue exposure "
-                    f"at approximately **{money(city.iloc[0])}**."
-                )
-
-    return (
-        "### 🤖 ChurnIQ Assistant\n"
-        "I can analyze the current customer dataset. Try asking:\n\n"
-        "- **How many high-risk customers do we have?**\n"
-        "- **What is our churn rate?**\n"
-        "- **How much revenue is at risk?**\n"
-        "- **Which city has the highest risk?**\n"
-        "- **What retention strategy do you recommend?**"
-    )
-
-
-if page == "🤖 AI Business Assistant":
-    st.markdown(
-        """
-        <div class="hero">
-            <div style="font-size:12px;color:#93c5fd;font-weight:700;
-                        letter-spacing:1px;text-transform:uppercase;">
-                INTELLIGENT BUSINESS ANALYTICS
-            </div>
-            <h1 style="margin-top:8px;">AI Business Assistant</h1>
-            <p>Ask questions about customers, churn, risk and revenue using natural language.</p>
-            <span class="hero-badge">● Connected to ChurnIQ customer intelligence</span>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    # Chat history
-    if "ai_messages" not in st.session_state:
-        st.session_state.ai_messages = []
-
-    # Quick prompts
-    st.markdown(
-        "<div class='section-title'>⚡ Quick Questions</div>",
-        unsafe_allow_html=True,
-    )
-
-    q1, q2, q3, q4 = st.columns(4)
-
-    quick_question = None
-
-    with q1:
-        if st.button("🔴 High-risk count", use_container_width=True):
-            quick_question = "How many high-risk customers do we have?"
-
-    with q2:
-        if st.button("📉 Churn rate", use_container_width=True):
-            quick_question = "What is our churn rate?"
-
-    with q3:
-        if st.button("💰 Revenue at risk", use_container_width=True):
-            quick_question = "How much revenue is at risk?"
-
-    with q4:
-        if st.button("🎯 Retention strategy", use_container_width=True):
-            quick_question = "What retention strategy do you recommend?"
-
-    # Render existing conversation
-    for message in st.session_state.ai_messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
-
-    typed_question = st.chat_input(
-        "Ask ChurnIQ about customers, churn, risk or revenue..."
-    )
-
-    question = quick_question or typed_question
-
-    if question:
-        st.session_state.ai_messages.append(
-            {"role": "user", "content": question}
-        )
-
-        with st.chat_message("user"):
-            st.markdown(question)
-
-        answer = None
-
-        # Try the project's existing RAG/AI engine first when available.
-        try:
-            if rag_engine is not None:
-                result = rag_engine(question)
-                if result:
-                    answer = str(result)
-        except Exception:
-            answer = None
-
-        # Reliable local analytics fallback.
-        if not answer:
-            answer = assistant_local_answer(question, df)
-
-        st.session_state.ai_messages.append(
-            {"role": "assistant", "content": answer}
-        )
-
-        with st.chat_message("assistant"):
-            st.markdown(answer)
-
-    if st.session_state.ai_messages:
-        if st.button("🗑️ Clear Conversation"):
-            st.session_state.ai_messages = []
-            st.rerun()
-
-
-
-
-# =========================================================
-# PREMIUM RFM & COHORT ANALYTICS
-# =========================================================
-def safe_numeric(series):
-    return pd.to_numeric(series, errors="coerce").fillna(0)
-
-
-def make_rfm_view(data):
-    temp = data.copy()
-
-    # Map available fields into a practical RFM-style scoring model.
-    # Recency proxy: lower tenure is treated as more recent/early lifecycle.
-    temp["rfm_recency"] = 1 / (1 + safe_numeric(temp["tenure_months"]))
-    temp["rfm_frequency"] = safe_numeric(temp.get("total_transactions", pd.Series(1, index=temp.index)))
-    temp["rfm_monetary"] = safe_numeric(temp["total_charges"])
-
-    def quintile_score(series, reverse=False):
-        if series.nunique() <= 1:
-            return pd.Series(3, index=series.index)
-        ranked = series.rank(method="first")
-        score = pd.qcut(ranked, 5, labels=False, duplicates="drop") + 1
-        if reverse:
-            score = 6 - score
-        return score.astype(int)
-
-    temp["R"] = quintile_score(temp["rfm_recency"], reverse=False)
-    temp["F"] = quintile_score(temp["rfm_frequency"], reverse=False)
-    temp["M"] = quintile_score(temp["rfm_monetary"], reverse=False)
-    temp["RFM Score"] = temp[["R", "F", "M"]].sum(axis=1)
-
-    def segment(score):
-        if score >= 13:
-            return "Champions"
-        if score >= 10:
-            return "Loyal Customers"
-        if score >= 7:
-            return "Potential Loyalists"
-        if score >= 5:
-            return "At Risk"
-        return "Needs Attention"
-
-    temp["RFM Segment"] = temp["RFM Score"].apply(segment)
-    return temp
-
-
-if page == "👥 RFM Segmentation":
-    st.markdown(
-        """
-        <div class="hero">
-            <div style="font-size:12px;color:#93c5fd;font-weight:700;
-                        letter-spacing:1px;text-transform:uppercase;">
-                CUSTOMER SEGMENTATION
-            </div>
-            <h1 style="margin-top:8px;">RFM Intelligence</h1>
-            <p>Segment customers by behavioral value and identify where retention effort should be focused.</p>
-            <span class="hero-badge">● Recency • Frequency • Monetary analysis</span>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    rfm = make_rfm_view(df)
-
-    segment_summary = (
-        rfm.groupby("RFM Segment")
-        .agg(
-            customers=("customer_id", "count"),
-            revenue=("total_charges", "sum"),
-            avg_churn_probability=("churn_probability", "mean"),
-        )
-        .reset_index()
-        .sort_values("revenue", ascending=False)
-    )
-
-    a, b, c, d = st.columns(4)
-    with a:
-        st.metric("Customers", f"{len(rfm):,}")
-    with b:
-        st.metric("Segments", f"{rfm['RFM Segment'].nunique():,}")
-    with c:
-        st.metric("At-Risk Segment", f"{(rfm['RFM Segment'] == 'At Risk').sum():,}")
-    with d:
-        champions_revenue = segment_summary.loc[
-            segment_summary["RFM Segment"] == "Champions", "revenue"
-        ].sum()
-        st.metric("Champion Revenue", money(champions_revenue))
-
-    left, right = st.columns([1.1, 1])
-
-    with left:
-        st.markdown("<div class='section-title'>📊 Customer Value Segments</div>", unsafe_allow_html=True)
-        fig = px.bar(
-            segment_summary,
-            x="RFM Segment",
-            y="customers",
-            text="customers",
-        )
-        fig.update_layout(
-            title="Customers by RFM segment",
-            xaxis_title="Segment",
-            yaxis_title="Customers",
-        )
-        st.plotly_chart(
-            chart_layout(fig, 410),
-            use_container_width=True,
-            config={"displayModeBar": False},
-        )
-
-    with right:
-        st.markdown("<div class='section-title'>💰 Revenue by Segment</div>", unsafe_allow_html=True)
-        fig = px.pie(
-            segment_summary,
-            names="RFM Segment",
-            values="revenue",
-            hole=0.58,
-        )
-        fig.update_traces(textinfo="percent+label")
-        st.plotly_chart(
-            chart_layout(fig, 410),
-            use_container_width=True,
-            config={"displayModeBar": False},
-        )
-
-    st.markdown("<div class='section-title'>🧭 Segment Performance</div>", unsafe_allow_html=True)
-    segment_table = segment_summary.copy()
-    segment_table["revenue"] = segment_table["revenue"].round(2)
-    segment_table["avg_churn_probability"] = segment_table["avg_churn_probability"].round(2)
-    st.dataframe(segment_table, use_container_width=True, hide_index=True)
-
-    st.markdown("<div class='section-title'>🔎 Customer-Level RFM</div>", unsafe_allow_html=True)
-
-    segment_filter = st.selectbox(
-        "Select RFM Segment",
-        ["All"] + sorted(rfm["RFM Segment"].unique().tolist()),
-        key="rfm_segment_filter",
-    )
-
-    rfm_filtered = rfm if segment_filter == "All" else rfm[rfm["RFM Segment"] == segment_filter]
-
-    rfm_columns = [
-        "customer_id",
-        "R",
-        "F",
-        "M",
-        "RFM Score",
-        "RFM Segment",
-        "churn_probability",
-        "risk_level",
-        "total_charges",
-    ]
-    rfm_columns = [c for c in rfm_columns if c in rfm_filtered.columns]
-
-    rfm_display = rfm_filtered[rfm_columns].sort_values(
-        "RFM Score", ascending=False
-    ).head(20)
-
-    st.dataframe(
-        rfm_display,
-        use_container_width=True,
-        hide_index=True,
-    )
-
-    rfm_csv = rfm_filtered[rfm_columns].to_csv(index=False).encode("utf-8")
-    st.download_button(
-        "📥 Export RFM Analysis",
-        data=rfm_csv,
-        file_name="churniq_rfm_analysis.csv",
-        mime="text/csv",
-    )
-
-
-if page == "📅 Cohort Analysis":
-    st.markdown(
-        """
-        <div class="hero">
-            <div style="font-size:12px;color:#93c5fd;font-weight:700;
-                        letter-spacing:1px;text-transform:uppercase;">
-                RETENTION ANALYTICS
-            </div>
-            <h1 style="margin-top:8px;">Cohort Retention Intelligence</h1>
-            <p>Compare customer groups over their lifecycle and identify retention patterns.</p>
-            <span class="hero-badge">● Cohort-based retention monitoring</span>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    cohort = df.copy()
-
-    # Use a real cohort/date column if available; otherwise create lifecycle cohorts
-    # from tenure so the dashboard remains useful with the current dataset.
-    date_candidates = ["signup_date", "join_date", "date", "cohort_month"]
-    date_col = next((c for c in date_candidates if c in cohort.columns), None)
-
-    if date_col:
-        cohort["_cohort_date"] = pd.to_datetime(
-            cohort[date_col], errors="coerce"
-        )
-        cohort = cohort.dropna(subset=["_cohort_date"])
-        cohort["Cohort"] = cohort["_cohort_date"].dt.to_period("M").astype(str)
-    else:
-        cohort["Cohort"] = pd.cut(
-            safe_numeric(cohort["tenure_months"]),
-            bins=[-1, 3, 6, 12, 24, 36, 60, float("inf")],
-            labels=["0–3 mo", "4–6 mo", "7–12 mo", "13–24 mo", "25–36 mo", "37–60 mo", "60+ mo"],
-        ).astype(str)
-
-    cohort_summary = (
-        cohort.groupby("Cohort", observed=False)
-        .agg(
-            customers=("customer_id", "count"),
-            churned=("churn", lambda x: (x == "Yes").sum()),
-            revenue=("total_charges", "sum"),
-            avg_churn_probability=("churn_probability", "mean"),
-        )
-        .reset_index()
-    )
-    cohort_summary["retention_rate"] = (
-        1 - cohort_summary["churned"] / cohort_summary["customers"]
-    ) * 100
-
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        st.metric("Cohorts", f"{len(cohort_summary):,}")
-    with c2:
-        st.metric("Avg. Retention", f"{cohort_summary['retention_rate'].mean():.1f}%")
-    with c3:
-        best_idx = cohort_summary["retention_rate"].idxmax()
-        st.metric("Best Cohort", str(cohort_summary.loc[best_idx, "Cohort"]))
-    with c4:
-        st.metric("Cohort Revenue", money(cohort_summary["revenue"].sum()))
-
-    left, right = st.columns([1.15, 1])
-
-    with left:
-        st.markdown("<div class='section-title'>📈 Retention by Cohort</div>", unsafe_allow_html=True)
-
-        fig = px.line(
-            cohort_summary,
-            x="Cohort",
-            y="retention_rate",
-            markers=True,
-        )
-        fig.update_layout(
-            title="Cohort retention rate",
-            xaxis_title="Cohort",
-            yaxis_title="Retention (%)",
-        )
-        st.plotly_chart(
-            chart_layout(fig, 410),
-            use_container_width=True,
-            config={"displayModeBar": False},
-        )
-
-    with right:
-        st.markdown("<div class='section-title'>👥 Cohort Size</div>", unsafe_allow_html=True)
-
-        fig = px.bar(
-            cohort_summary,
-            x="Cohort",
-            y="customers",
-            text="customers",
-        )
-        fig.update_layout(
-            title="Customers by cohort",
-            xaxis_title="Cohort",
-            yaxis_title="Customers",
-        )
-        st.plotly_chart(
-            chart_layout(fig, 410),
-            use_container_width=True,
-            config={"displayModeBar": False},
-        )
-
-    st.markdown("<div class='section-title'>🧩 Cohort Performance Matrix</div>", unsafe_allow_html=True)
-
-    matrix = cohort_summary[
-        ["Cohort", "customers", "churned", "retention_rate", "revenue", "avg_churn_probability"]
-    ].copy()
-
-    matrix["retention_rate"] = matrix["retention_rate"].round(2)
-    matrix["avg_churn_probability"] = matrix["avg_churn_probability"].round(2)
-
-    st.dataframe(
-        matrix,
-        use_container_width=True,
-        hide_index=True,
-    )
-
-    cohort_csv = matrix.to_csv(index=False).encode("utf-8")
-    st.download_button(
-        "📥 Export Cohort Report",
-        data=cohort_csv,
-        file_name="churniq_cohort_analysis.csv",
-        mime="text/csv",
-    )
-
-
-
-# =========================================================
-# REVENUE AT RISK
-# =========================================================
-if page == "💰 Revenue at Risk":
+elif page == "💰 Revenue at Risk":
     st.markdown(
         """
         <div class="hero">
@@ -1834,7 +1703,6 @@ if page == "💰 Revenue at Risk":
         unsafe_allow_html=True,
     )
 
-    # Filters
     f1, f2, f3 = st.columns(3)
 
     with f1:
@@ -1847,7 +1715,8 @@ if page == "💰 Revenue at Risk":
     with f2:
         revenue_contract = st.selectbox(
             "Contract",
-            ["All"] + sorted(df["contract_type"].dropna().astype(str).unique().tolist()),
+            ["All"]
+            + sorted(df["contract_type"].dropna().astype(str).unique().tolist()),
             key="revenue_contract",
         )
 
@@ -1883,11 +1752,9 @@ if page == "💰 Revenue at Risk":
     total_at_risk = at_risk["total_charges"].sum()
 
     exposure_pct = (
-        total_at_risk / total_revenue * 100
-        if total_revenue else 0
+        total_at_risk / total_revenue * 100 if total_revenue else 0
     )
 
-    # KPI cards
     st.markdown(
         "<div class='section-title'>Financial Exposure Snapshot</div>",
         unsafe_allow_html=True,
@@ -1907,7 +1774,6 @@ if page == "💰 Revenue at Risk":
     with k4:
         st.metric("Risk Exposure", f"{exposure_pct:.1f}%")
 
-    # Financial exposure chart
     left, right = st.columns([1.2, 1])
 
     with left:
@@ -1920,7 +1786,9 @@ if page == "💰 Revenue at Risk":
             {
                 "Risk": ["Low Risk", "Medium Risk", "High Risk"],
                 "Revenue": [
-                    revenue_df[revenue_df["risk_level"] == "Low Risk"]["total_charges"].sum(),
+                    revenue_df[revenue_df["risk_level"] == "Low Risk"][
+                        "total_charges"
+                    ].sum(),
                     medium_risk_revenue,
                     high_risk_revenue,
                 ],
@@ -1956,9 +1824,9 @@ if page == "💰 Revenue at Risk":
                 "Revenue": [
                     high_risk_revenue,
                     medium_risk_revenue,
-                    revenue_df[
-                        revenue_df["risk_level"] == "Low Risk"
-                    ]["total_charges"].sum(),
+                    revenue_df[revenue_df["risk_level"] == "Low Risk"][
+                        "total_charges"
+                    ].sum(),
                 ],
             }
         )
@@ -1969,14 +1837,13 @@ if page == "💰 Revenue at Risk":
             values="Revenue",
             hole=0.60,
         )
-        fig.update_traces(textinfo="percent+label")
+        fig.update_traces(textinfo="percent")
         st.plotly_chart(
             chart_layout(fig, 410),
             use_container_width=True,
             config={"displayModeBar": False},
         )
 
-    # Risk by city
     st.markdown(
         "<div class='section-title'>📍 Revenue Risk by City</div>",
         unsafe_allow_html=True,
@@ -1984,7 +1851,9 @@ if page == "💰 Revenue at Risk":
 
     if "city" in revenue_df.columns:
         city_risk = (
-            revenue_df[revenue_df["risk_level"].isin(["High Risk", "Medium Risk"])]
+            revenue_df[
+                revenue_df["risk_level"].isin(["High Risk", "Medium Risk"])
+            ]
             .groupby("city")
             .agg(
                 revenue_at_risk=("total_charges", "sum"),
@@ -2003,7 +1872,6 @@ if page == "💰 Revenue at Risk":
             hide_index=True,
         )
 
-    # Highest exposure customers
     st.markdown(
         "<div class='section-title'>🔥 Highest Revenue Exposure Customers</div>",
         unsafe_allow_html=True,
@@ -2040,7 +1908,6 @@ if page == "💰 Revenue at Risk":
         hide_index=True,
     )
 
-    # Management actions
     st.markdown(
         "<div class='section-title'>💡 Financial Risk Actions</div>",
         unsafe_allow_html=True,
@@ -2087,9 +1954,9 @@ if page == "💰 Revenue at Risk":
             unsafe_allow_html=True,
         )
 
-    # Export report data
     export_columns = [
-        c for c in [
+        c
+        for c in [
             "customer_id",
             "city",
             "contract_type",
@@ -2101,10 +1968,15 @@ if page == "💰 Revenue at Risk":
         if c in at_risk.columns
     ]
 
-    export_data = at_risk[export_columns].sort_values(
-        "total_charges",
-        ascending=False,
-    ).to_csv(index=False).encode("utf-8")
+    export_data = (
+        at_risk[export_columns]
+        .sort_values(
+            "total_charges",
+            ascending=False,
+        )
+        .to_csv(index=False)
+        .encode("utf-8")
+    )
 
     st.download_button(
         "📥 Export Revenue Risk Report",
@@ -2114,11 +1986,10 @@ if page == "💰 Revenue at Risk":
     )
 
 
-
 # =========================================================
-# CUSTOMER EXPLORER
+# PAGE 6: CUSTOMER EXPLORER
 # =========================================================
-if page == "🔎 Customer Explorer":
+elif page == "🔎 Customer Explorer":
     st.markdown(
         """
         <div class="hero">
@@ -2160,7 +2031,6 @@ if page == "🔎 Customer Explorer":
             unsafe_allow_html=True,
         )
 
-    # Customer headline
     st.markdown(
         f"""
         <div style="
@@ -2184,7 +2054,6 @@ if page == "🔎 Customer Explorer":
         unsafe_allow_html=True,
     )
 
-    # Core customer metrics
     probability = float(customer.get("churn_probability", 0) or 0)
     monthly = float(customer.get("monthly_charges", 0) or 0)
     total = float(customer.get("total_charges", 0) or 0)
@@ -2260,7 +2129,6 @@ if page == "🔎 Customer Explorer":
             hide_index=True,
         )
 
-    # Recommendation
     recommendation = retention_recommendation(customer)
 
     st.markdown(
@@ -2268,19 +2136,11 @@ if page == "🔎 Customer Explorer":
         unsafe_allow_html=True,
     )
 
-    if risk_value == "High Risk":
-        box_class = "insight"
-        icon = "🔴"
-    elif risk_value == "Medium Risk":
-        box_class = "insight"
-        icon = "🟠"
-    else:
-        box_class = "insight"
-        icon = "🟢"
+    icon = "🔴" if risk_value == "High Risk" else ("🟠" if risk_value == "Medium Risk" else "🟢")
 
     st.markdown(
         f"""
-        <div class="{box_class}" style="font-size:15px;line-height:1.7;">
+        <div class="insight" style="font-size:15px;line-height:1.7;">
             <b>{icon} Recommended Action</b><br>
             {recommendation}
         </div>
@@ -2288,7 +2148,6 @@ if page == "🔎 Customer Explorer":
         unsafe_allow_html=True,
     )
 
-    # Risk factors / useful signals
     st.markdown(
         "<div class='section-title'>📌 Customer Signals</div>",
         unsafe_allow_html=True,
@@ -2297,7 +2156,11 @@ if page == "🔎 Customer Explorer":
     signal_cols = st.columns(3)
 
     with signal_cols[0]:
-        status = "High exposure" if total >= df["total_charges"].median() else "Standard exposure"
+        status = (
+            "High exposure"
+            if total >= df["total_charges"].median()
+            else "Standard exposure"
+        )
         st.markdown(
             f"<div class='insight'><b>💰 Value Signal</b><br>{status}</div>",
             unsafe_allow_html=True,
@@ -2306,7 +2169,8 @@ if page == "🔎 Customer Explorer":
     with signal_cols[1]:
         contract_signal = (
             "Contract upgrade opportunity"
-            if str(customer.get("contract_type", "")).lower() in {"month-to-month", "monthly"}
+            if str(customer.get("contract_type", "")).lower()
+            in {"month-to-month", "monthly"}
             else "Stable contract profile"
         )
         st.markdown(
@@ -2326,105 +2190,105 @@ if page == "🔎 Customer Explorer":
         )
 
 
-
 # =========================================================
-# AI BUSINESS ASSISTANT
+# PAGE 7: AI BUSINESS ASSISTANT
 # =========================================================
 elif page == "🤖 AI Business Assistant":
-    page_header(
-        "AI Business Assistant",
-        "Ask business questions using the project's Ollama + Llama + RAG intelligence layer.",
-        "🧠",
+    st.markdown(
+        """
+        <div class="hero">
+            <div style="font-size:12px;color:#93c5fd;font-weight:700;
+                        letter-spacing:1px;text-transform:uppercase;">
+                INTELLIGENT BUSINESS ANALYTICS
+            </div>
+            <h1 style="margin-top:8px;">AI Business Assistant</h1>
+            <p>Ask questions about customers, churn, risk and revenue using natural language.</p>
+            <span class="hero-badge">● Connected to ChurnIQ customer intelligence</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
-    st.markdown("""
-    <div class="card">
-        <b>Ask your data</b><br>
-        <span style="color:#64748b;font-size:13px;">
-            Get quick answers about churn, customers, revenue risk, segments and retention.
-        </span>
-    </div>
-    """, unsafe_allow_html=True)
+    if "ai_messages" not in st.session_state:
+        st.session_state.ai_messages = []
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown(
+        "<div class='section-title'>⚡ Quick Questions</div>",
+        unsafe_allow_html=True,
+    )
 
-    try:
-        from src.rag._engine import answer_question
+    q1, q2, q3, q4 = st.columns(4)
+    quick_question = None
 
-        question = st.text_input(
-            "Business question",
-            placeholder="Example: How many high risk customers do we have?",
+    with q1:
+        if st.button("🔴 High-risk count", use_container_width=True):
+            quick_question = "How many high-risk customers do we have?"
+
+    with q2:
+        if st.button("📉 Churn rate", use_container_width=True):
+            quick_question = "What is our churn rate?"
+
+    with q3:
+        if st.button("💰 Revenue at risk", use_container_width=True):
+            quick_question = "How much revenue is at risk?"
+
+    with q4:
+        if st.button("🎯 Retention strategy", use_container_width=True):
+            quick_question = "What retention strategy do you recommend?"
+
+    for message in st.session_state.ai_messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+    typed_question = st.chat_input(
+        "Ask ChurnIQ about customers, churn, risk or revenue..."
+    )
+
+    question = quick_question or typed_question
+
+    if question:
+        st.session_state.ai_messages.append({"role": "user", "content": question})
+
+        with st.chat_message("user"):
+            st.markdown(question)
+
+        answer = None
+
+        try:
+            from src.rag._engine import answer_question
+            answer = answer_question(question)
+        except Exception:
+            answer = None
+
+        if not answer:
+            answer = assistant_local_answer(question, df)
+
+        st.session_state.ai_messages.append(
+            {"role": "assistant", "content": answer}
         )
 
-        if question:
-            with st.spinner("Analyzing customer intelligence..."):
-                try:
-                    answer = answer_question(question)
-                    st.markdown(
-                        f"""
-                        <div class="insight">
-                            <b>🤖 ChurnIQ Assistant</b><br><br>
-                            {answer}
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-                except Exception as e:
-                    st.error(f"AI Assistant Error: {e}")
+        with st.chat_message("assistant"):
+            st.markdown(answer)
 
-        st.markdown("<div class='section-title'>Example Questions</div>", unsafe_allow_html=True)
-        examples = [
-            "How many customers do we have?",
-            "How many high risk customers do we have?",
-            "What is the churn rate?",
-            "How much revenue is at risk?",
-            "What are our RFM segments?",
-            "Who are our Champions?",
-            "Give me retention recommendations.",
-            "Give me a business summary.",
-        ]
-
-        cols = st.columns(2)
-        for i, example in enumerate(examples):
-            with cols[i % 2]:
-                st.markdown(
-                    f"""
-                    <div class="card" style="margin-bottom:10px;padding:14px;">
-                        <span style="color:#475569;font-size:13px;">💡 {example}</span>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-
-    except ImportError:
-        st.error("AI Assistant module was not found. Check src/rag/_engine.py and your project dependencies.")
+    if st.session_state.ai_messages:
+        if st.button("🗑️ Clear Conversation"):
+            st.session_state.ai_messages = []
+            st.rerun()
 
 
 # =========================================================
 # FOOTER
 # =========================================================
-st.markdown("""
-<div class="footer">
-    ChurnIQ • Customer Churn Intelligence Platform &nbsp;|&nbsp;
-    Built with Python, Streamlit, Pandas, Plotly & AI
-</div>
-""", unsafe_allow_html=True)
-
-
-
-# =========================================================
-# PREMIUM FOOTER
-# =========================================================
 st.markdown(
     """
     <div style="
         margin-top:42px;
-        padding:18px 4px 4px;
+        padding:18px 4px 12px;
         border-top:1px solid #e2e8f0;
         color:#94a3b8;
         font-size:11px;
         text-align:center;">
-        <b style="color:#475569;">ChurnIQ</b> • Customer Intelligence Platform
+        <b style="color:#475569;">ChurnIQ v1.0</b> • Customer Intelligence Platform
         &nbsp;•&nbsp; Predict churn. Protect revenue. Retain customers.
     </div>
     """,
