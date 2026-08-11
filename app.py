@@ -1203,6 +1203,7 @@ if page == "📊 Overview":
 # PAGE 2: RFM SEGMENTATION
 # =========================================================
 elif page == "👥 RFM Segmentation":
+
     st.markdown(
         """
         <div class="hero">
@@ -1210,18 +1211,42 @@ elif page == "👥 RFM Segmentation":
                         letter-spacing:1px;text-transform:uppercase;">
                 CUSTOMER SEGMENTATION
             </div>
+
             <h1 style="margin-top:8px;">RFM Intelligence</h1>
-            <p>Segment customers by behavioral value and identify where retention effort should be focused.</p>
-            <span class="hero-badge">● Recency • Frequency • Monetary analysis</span>
+
+            <p>
+                Segment customers by behavioral value and identify where
+                retention effort should be focused.
+            </p>
+
+            <span class="hero-badge">
+                ● Recency • Frequency • Monetary analysis
+            </span>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
+    # =====================================================
+    # RFM DATA
+    # =====================================================
+
     rfm = make_rfm_view(df)
+
     rfm["total_charges"] = pd.to_numeric(
-        rfm["total_charges"], errors="coerce"
+        rfm["total_charges"],
+        errors="coerce"
     ).fillna(0)
+
+    if "churn_probability" in rfm.columns:
+        rfm["churn_probability"] = pd.to_numeric(
+            rfm["churn_probability"],
+            errors="coerce"
+        ).fillna(0)
+
+    # =====================================================
+    # SEGMENT SUMMARY
+    # =====================================================
 
     segment_summary = (
         rfm.groupby("RFM Segment")
@@ -1231,47 +1256,96 @@ elif page == "👥 RFM Segmentation":
             avg_churn_probability=("churn_probability", "mean"),
         )
         .reset_index()
-        .sort_values("revenue", ascending=False)
+        .sort_values(
+            "revenue",
+            ascending=False
+        )
     )
 
+    # =====================================================
+    # KPI CARDS
+    # =====================================================
+
     a, b, c, d = st.columns(4)
+
     with a:
-        st.metric("Customers", f"{len(rfm):,}")
-    with b:
-        st.metric("Segments", f"{rfm['RFM Segment'].nunique():,}")
-    with c:
         st.metric(
-            "At-Risk Segment", f"{(rfm['RFM Segment'] == 'At Risk').sum():,}"
+            "Customers",
+            f"{len(rfm):,}"
         )
+
+    with b:
+        st.metric(
+            "Segments",
+            f"{rfm['RFM Segment'].nunique():,}"
+        )
+
+    with c:
+        at_risk_count = (
+            rfm["RFM Segment"] == "At Risk"
+        ).sum()
+
+        st.metric(
+            "At-Risk Segment",
+            f"{at_risk_count:,}"
+        )
+
     with d:
         champions_revenue = segment_summary.loc[
-            segment_summary["RFM Segment"] == "Champions", "revenue"
+            segment_summary["RFM Segment"] == "Champions",
+            "revenue"
         ].sum()
-        st.metric("Champion Revenue", money(champions_revenue))
+
+        st.metric(
+            "Champion Revenue",
+            money(champions_revenue)
+        )
+
+    # =====================================================
+    # CHART SECTION
+    # =====================================================
 
     left, right = st.columns([1.1, 1])
 
+    # =====================================================
+    # CUSTOMER VALUE SEGMENTS
+    # =====================================================
+
     with left:
+
         st.markdown(
             "<div class='section-title'>📊 Customer Value Segments</div>",
             unsafe_allow_html=True,
         )
+
         fig = px.bar(
             segment_summary,
             x="RFM Segment",
             y="customers",
             text="customers",
         )
+
         fig.update_layout(
-            title="Customers by RFM segment",
+            title="Customers by RFM Segment",
             xaxis_title="Segment",
             yaxis_title="Customers",
         )
+
+        fig.update_traces(
+            textposition="outside"
+        )
+
         st.plotly_chart(
             chart_layout(fig, 410),
             use_container_width=True,
-            config={"displayModeBar": False},
+            config={
+                "displayModeBar": False
+            },
         )
+
+    # =====================================================
+    # REVENUE BY SEGMENT
+    # =====================================================
 
     with right:
         st.markdown(
@@ -1291,15 +1365,11 @@ elif page == "👥 RFM Segmentation":
         )
 
         fig = px.pie(
-        segment_summary,
-        names="RFM Segment",
-        values="revenue",
-        hole=0.58,
+            segment_summary,
+            names="RFM Segment",
+            values="revenue",
+            hole=0.58,
         )
-        names=pie_labels,
-        values=pie_values,
-        hole=0.58,
-        
 
         fig.update_traces(
             texttemplate="%{percent:.1%}",
@@ -1312,6 +1382,7 @@ elif page == "👥 RFM Segmentation":
         )
 
         fig.update_layout(
+            title="Revenue Share",
             showlegend=True,
             legend=dict(
                 orientation="h",
@@ -1324,33 +1395,77 @@ elif page == "👥 RFM Segmentation":
             use_container_width=True,
             config={"displayModeBar": False},
         )
+
+    # =====================================================
+    # SEGMENT PERFORMANCE
+    # =====================================================
+
     st.markdown(
         "<div class='section-title'>🧭 Segment Performance</div>",
         unsafe_allow_html=True,
     )
+
     segment_table = segment_summary.copy()
-    segment_table["revenue"] = segment_table["revenue"].round(2)
-    segment_table["avg_churn_probability"] = segment_table[
-        "avg_churn_probability"
-    ].round(2)
-    st.dataframe(segment_table, use_container_width=True, hide_index=True)
+
+    segment_table["revenue"] = (
+        segment_table["revenue"]
+        .round(2)
+    )
+
+    segment_table["avg_churn_probability"] = (
+        segment_table[
+            "avg_churn_probability"
+        ]
+        .round(2)
+    )
+
+    st.dataframe(
+        segment_table,
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    # =====================================================
+    # CUSTOMER LEVEL RFM
+    # =====================================================
 
     st.markdown(
         "<div class='section-title'>🔎 Customer-Level RFM</div>",
         unsafe_allow_html=True,
     )
 
+    segment_options = (
+        rfm["RFM Segment"]
+        .dropna()
+        .astype(str)
+        .unique()
+        .tolist()
+    )
+
+    segment_options = (
+        ["All"] +
+        sorted(segment_options)
+    )
+
     segment_filter = st.selectbox(
         "Select RFM Segment",
-        ["All"] + sorted(rfm["RFM Segment"].unique().tolist()),
+        segment_options,
         key="rfm_segment_filter",
     )
 
-    rfm_filtered = (
-        rfm
-        if segment_filter == "All"
-        else rfm[rfm["RFM Segment"] == segment_filter]
-    )
+    if segment_filter == "All":
+
+        rfm_filtered = rfm.copy()
+
+    else:
+
+        rfm_filtered = rfm[
+            rfm["RFM Segment"] == segment_filter
+        ]
+
+    # =====================================================
+    # RFM TABLE COLUMNS
+    # =====================================================
 
     rfm_columns = [
         "customer_id",
@@ -1363,11 +1478,23 @@ elif page == "👥 RFM Segmentation":
         "risk_level",
         "total_charges",
     ]
-    rfm_columns = [c for c in rfm_columns if c in rfm_filtered.columns]
 
-    rfm_display = rfm_filtered[rfm_columns].sort_values(
-        "RFM Score", ascending=False
-    ).head(20)
+    rfm_columns = [
+        column
+        for column in rfm_columns
+        if column in rfm_filtered.columns
+    ]
+
+    rfm_display = (
+        rfm_filtered[
+            rfm_columns
+        ]
+        .sort_values(
+            "RFM Score",
+            ascending=False
+        )
+        .head(20)
+    )
 
     st.dataframe(
         rfm_display,
@@ -1375,15 +1502,24 @@ elif page == "👥 RFM Segmentation":
         hide_index=True,
     )
 
-    rfm_csv = rfm_filtered[rfm_columns].to_csv(index=False).encode("utf-8")
+    # =====================================================
+    # EXPORT RFM ANALYSIS
+    # =====================================================
+
+    rfm_csv = (
+        rfm_filtered[
+            rfm_columns
+        ]
+        .to_csv(index=False)
+        .encode("utf-8")
+    )
+
     st.download_button(
         "📥 Export RFM Analysis",
         data=rfm_csv,
         file_name="churniq_rfm_analysis.csv",
         mime="text/csv",
     )
-
-
 # =========================================================
 # PAGE 3: COHORT ANALYSIS
 # =========================================================
@@ -2258,14 +2394,7 @@ elif page == "🤖 AI Business Assistant":
 
         answer = None
 
-        try:
-            from src.rag._engine import answer_question
-            answer = answer_question(question)
-        except Exception:
-            answer = None
-
-        if not answer:
-            answer = assistant_local_answer(question, df)
+        
 
         st.session_state.ai_messages.append(
             {"role": "assistant", "content": answer}
