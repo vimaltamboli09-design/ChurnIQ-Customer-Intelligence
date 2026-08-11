@@ -1,96 +1,115 @@
-# ChurnIQ — Customer Intelligence Platform
+# 🚀 ChurnIQ — Customer Intelligence Platform
 
-ChurnIQ is a Streamlit-based customer analytics platform designed to help teams
-predict customer churn, understand customer value, quantify revenue exposure,
-and turn risk signals into retention actions.
+> Predict churn. Protect revenue. Retain customers.
 
-## Core Features
+ChurnIQ is an AI-powered customer analytics platform built with Python and
+Streamlit to help businesses identify customers at risk of churn, understand
+customer segments, analyze retention trends, and estimate revenue at risk.
 
-- Secure local authentication with hashed passwords
-- Executive customer intelligence dashboard
-- Churn prediction and risk classification
-- RFM customer segmentation
-- Cohort retention analytics
-- Customer 360 profile
-- Retention recommendation engine
-- Revenue-at-risk intelligence
-- AI Business Assistant
-- CSV exports for analytics workflows
-- Premium SaaS-style UI
+## 🌐 Live Demo
 
-## Tech Stack
+🔗 **Live Application:** https://share.streamlit.io/user/vimaltamboli09-design
 
-- Python
-- Streamlit
-- Pandas
-- NumPy
-- Plotly
-- Scikit-learn
+## 📌 Overview
 
-## Project Structure
+ChurnIQ transforms customer data into actionable business intelligence.
+
+The platform provides:
+
+- 🧠 Customer churn prediction
+- 👥 RFM customer segmentation
+- 📅 Cohort retention analysis
+- 💰 Revenue-at-risk analysis
+- 🔎 Customer 360 exploration
+- 🎯 Retention recommendations
+- 🤖 AI-style business insights
+- 📊 Interactive analytics dashboards
+
+## ✨ Key Features
+
+### 🧠 Churn Prediction
+
+Classifies customers into:
+
+- High Risk
+- Medium Risk
+- Low Risk
+
+and provides churn probability to help prioritize retention activities.
+
+### 👥 RFM Segmentation
+
+Analyzes customers using:
+
+- Recency
+- Frequency
+- Monetary value
+
+to identify high-value and at-risk customer groups.
+
+### 📅 Cohort Analysis
+
+Tracks customer retention across signup cohorts and helps identify
+retention patterns over time.
+
+### 💰 Revenue Intelligence
+
+Estimates potential revenue exposure from customers with high churn risk.
+
+### 🔎 Customer 360
+
+Provides customer-level insights including:
+
+- Customer profile
+- Purchase activity
+- Churn probability
+- Risk level
+- Revenue contribution
+- Retention signals
+
+### 🤖 AI Business Assistant
+
+Provides business-oriented insights from customer analytics to support
+data-driven retention decisions.
+
+---
+
+## 🛠️ Tech Stack
+
+| Technology | Purpose |
+|---|---|
+| Python | Core programming |
+| Streamlit | Web application |
+| Pandas | Data processing |
+| NumPy | Numerical analysis |
+| Plotly | Interactive visualization |
+| Scikit-learn | Machine learning |
+| SQLite | Local authentication |
+| Git & GitHub | Version control |
+
+---
+
+## 📊 Application Architecture
 
 ```text
-ChurnIQ/
-├── app.py
-├── requirements.txt
-├── README.md
-├── .gitignore
-├── .streamlit/
-│   └── config.toml
-└── data/
-    └── your_dataset.csv
-```
-
-> Keep real user databases, secrets, and private datasets out of GitHub.
-
-## Local Setup
-
-### 1. Create and activate a virtual environment
-
-Windows PowerShell:
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-```
-
-### 2. Install dependencies
-
-```powershell
-pip install -r requirements.txt
-```
-
-### 3. Run ChurnIQ
-
-```powershell
-streamlit run app.py
-```
-
-## Deployment
-
-The application can be deployed to a Streamlit-compatible hosting service.
-
-Typical deployment settings:
-
-- Main file: `app.py`
-- Python dependencies: `requirements.txt`
-- Python version: use a currently supported 3.x version
-- Secrets: configure through the hosting platform, never commit secrets
-
-## Portfolio Description
-
-**ChurnIQ — AI-Powered Customer Churn & Revenue Intelligence Platform**
-
-Built a professional customer analytics platform using Python, Streamlit,
-Pandas and Plotly to analyze churn probability, customer segmentation,
-cohort retention, customer value and revenue at risk. Implemented a
-Customer 360 view, automated retention recommendations and an AI-style
-business assistant to convert analytical signals into actionable decisions.
-
-## Important Security Note
-
-The included authentication is suitable for a local/demo portfolio application.
-For production use, replace local SQLite authentication with a managed
-authentication provider and a production-grade database, add authorization
-roles, secure secrets, HTTPS, rate limiting, audit logging and proper data
-protection controls.
+                ┌─────────────────────┐
+                │       User          │
+                └──────────┬──────────┘
+                           │
+                           ▼
+                ┌─────────────────────┐
+                │    Streamlit UI     │
+                └──────────┬──────────┘
+                           │
+        ┌──────────────────┼──────────────────┐
+        ▼                  ▼                  ▼
+ Authentication      Analytics Engine    AI Insights
+        │                  │                  │
+        ▼                  ▼                  ▼
+   SQLite DB       Pandas / Scikit-learn   Business Logic
+                           │
+                           ▼
+                 Customer Dataset
+                           │
+                           ▼
+                    Visualizations
