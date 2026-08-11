@@ -16,6 +16,8 @@ env/
 
 # Local generated data
 data/
+!data/
+!data/churn_predictions.csv
 exports/
 logs/
 
