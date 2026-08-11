@@ -1291,10 +1291,15 @@ elif page == "👥 RFM Segmentation":
         )
 
         fig = px.pie(
-            names=pie_labels,
-            values=pie_values,
-            hole=0.58,
+        segment_summary,
+        names="RFM Segment",
+        values="revenue",
+        hole=0.58,
         )
+        names=pie_labels,
+        values=pie_values,
+        hole=0.58,
+        
 
         fig.update_traces(
             texttemplate="%{percent:.1%}",
@@ -1319,7 +1324,6 @@ elif page == "👥 RFM Segmentation":
             use_container_width=True,
             config={"displayModeBar": False},
         )
-
     st.markdown(
         "<div class='section-title'>🧭 Segment Performance</div>",
         unsafe_allow_html=True,
