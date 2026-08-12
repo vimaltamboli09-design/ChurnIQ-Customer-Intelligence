@@ -626,12 +626,24 @@ def metric_card(label, value, note=""):
 
 
 def chart_layout(fig, height=390):
+    # Prevent Plotly from rendering an unwanted "undefined" title.
+    try:
+        current_title = fig.layout.title.text
+    except Exception:
+        current_title = None
+
+    if current_title is None or str(current_title).strip().lower() == "undefined":
+        title_text = ""
+    else:
+        title_text = current_title
+
     fig.update_layout(
         height=height,
         margin=dict(l=10, r=10, t=55, b=10),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         font=dict(family="Inter", color="#334155"),
+        title_text=title_text,
         title_font=dict(size=16, color="#111827"),
         legend=dict(orientation="h", y=-0.18),
     )
@@ -1100,6 +1112,7 @@ if page == "📊 Overview":
                 "Low Risk": "#10b981",
             },
         )
+        fig.update_layout(title_text="")
         fig.update_traces(textinfo="percent+label")
         st.plotly_chart(
             chart_layout(fig, 410),
@@ -1198,35 +1211,29 @@ if page == "📊 Overview":
             unsafe_allow_html=True,
         )
 
+
 # =========================================================
 # PAGE 2: RFM SEGMENTATION
 # =========================================================
 elif page == "👥 RFM Segmentation":
-
     st.markdown(
-        '<div class="hero">'
-        '<div style="font-size:12px;color:#93c5fd;font-weight:700;'
-        'letter-spacing:1px;text-transform:uppercase;">'
-        'CUSTOMER SEGMENTATION'
-        '</div>'
-        '<h1 style="margin-top:8px;">RFM Intelligence</h1>'
-        '<p>Segment customers by behavioral value and identify where '
-        'retention effort should be focused.</p>'
-        '<span class="hero-badge">'
-        '● Recency • Frequency • Monetary analysis'
-        '</span>'
-        '</div>',
+        """
+        <div class="hero">
+            <div style="font-size:12px;color:#93c5fd;font-weight:700;
+                        letter-spacing:1px;text-transform:uppercase;">
+                CUSTOMER SEGMENTATION
+            </div>
+            <h1 style="margin-top:8px;">RFM Intelligence</h1>
+            <p>Segment customers by behavioral value and identify where retention effort should be focused.</p>
+            <span class="hero-badge">● Recency • Frequency • Monetary analysis</span>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
 
-    # -----------------------------------------------------
-    # RFM DATA
-    # -----------------------------------------------------
     rfm = make_rfm_view(df)
-
     rfm["total_charges"] = pd.to_numeric(
-        rfm["total_charges"],
-        errors="coerce"
+        rfm["total_charges"], errors="coerce"
     ).fillna(0)
 
     segment_summary = (
@@ -1240,82 +1247,60 @@ elif page == "👥 RFM Segmentation":
         .sort_values("revenue", ascending=False)
     )
 
-    # -----------------------------------------------------
-    # KPI CARDS
-    # -----------------------------------------------------
     a, b, c, d = st.columns(4)
-
     with a:
-        st.metric(
-            "Customers",
-            f"{len(rfm):,}"
-        )
-
+        st.metric("Customers", f"{len(rfm):,}")
     with b:
-        st.metric(
-            "Segments",
-            f"{rfm['RFM Segment'].nunique():,}"
-        )
-
+        st.metric("Segments", f"{rfm['RFM Segment'].nunique():,}")
     with c:
         st.metric(
-            "At-Risk Segment",
-            f"{(rfm['RFM Segment'] == 'At Risk').sum():,}"
+            "At-Risk Segment", f"{(rfm['RFM Segment'] == 'At Risk').sum():,}"
         )
-
     with d:
         champions_revenue = segment_summary.loc[
-            segment_summary["RFM Segment"] == "Champions",
-            "revenue"
+            segment_summary["RFM Segment"] == "Champions", "revenue"
         ].sum()
+        st.metric("Champion Revenue", money(champions_revenue))
 
-        st.metric(
-            "Champion Revenue",
-            money(champions_revenue)
-        )
-
-    # -----------------------------------------------------
-    # CHARTS
-    # -----------------------------------------------------
     left, right = st.columns([1.1, 1])
 
-    # Customer Value Segments
     with left:
-
         st.markdown(
-            "<div class='section-title'>"
-            "📊 Customer Value Segments"
-            "</div>",
+            "<div class='section-title'>📊 Customer Value Segments</div>",
             unsafe_allow_html=True,
         )
-
         fig = px.bar(
             segment_summary,
             x="RFM Segment",
             y="customers",
             text="customers",
         )
-
         fig.update_layout(
             title="Customers by RFM segment",
             xaxis_title="Segment",
             yaxis_title="Customers",
         )
-
         st.plotly_chart(
             chart_layout(fig, 410),
             use_container_width=True,
             config={"displayModeBar": False},
         )
 
-    # Revenue by Segment
     with right:
-
         st.markdown(
-            "<div class='section-title'>"
-            "💰 Revenue by Segment"
-            "</div>",
+            "<div class='section-title'>💰 Revenue by Segment</div>",
             unsafe_allow_html=True,
+        )
+
+        pie_labels = segment_summary["RFM Segment"].astype(str).tolist()
+
+        pie_values = (
+            pd.to_numeric(
+                segment_summary["revenue"],
+                errors="coerce",
+            )
+            .fillna(0)
+            .tolist()
         )
 
         fig = px.pie(
@@ -1324,6 +1309,7 @@ elif page == "👥 RFM Segmentation":
             values="revenue",
             hole=0.58,
         )
+        fig.update_layout(title_text="")
 
         fig.update_traces(
             texttemplate="%{percent:.1%}",
@@ -1331,13 +1317,11 @@ elif page == "👥 RFM Segmentation":
             hovertemplate=(
                 "<b>%{label}</b><br>"
                 "Revenue: ₹%{value:,.0f}<br>"
-                "Share: %{percent}"
-                "<extra></extra>"
+                "Share: %{percent}<extra></extra>"
             ),
         )
 
         fig.update_layout(
-            title=None,
             showlegend=True,
             legend=dict(
                 orientation="h",
@@ -1350,66 +1334,34 @@ elif page == "👥 RFM Segmentation":
             use_container_width=True,
             config={"displayModeBar": False},
         )
-
-    # -----------------------------------------------------
-    # SEGMENT PERFORMANCE
-    # -----------------------------------------------------
     st.markdown(
-        "<div class='section-title'>"
-        "🧭 Segment Performance"
-        "</div>",
+        "<div class='section-title'>🧭 Segment Performance</div>",
         unsafe_allow_html=True,
     )
-
     segment_table = segment_summary.copy()
+    segment_table["revenue"] = segment_table["revenue"].round(2)
+    segment_table["avg_churn_probability"] = segment_table[
+        "avg_churn_probability"
+    ].round(2)
+    st.dataframe(segment_table, use_container_width=True, hide_index=True)
 
-    segment_table["revenue"] = (
-        segment_table["revenue"]
-        .round(2)
-    )
-
-    segment_table["avg_churn_probability"] = (
-        segment_table["avg_churn_probability"]
-        .round(2)
-    )
-
-    st.dataframe(
-        segment_table,
-        use_container_width=True,
-        hide_index=True,
-    )
-
-    # -----------------------------------------------------
-    # CUSTOMER LEVEL RFM
-    # -----------------------------------------------------
     st.markdown(
-        "<div class='section-title'>"
-        "🔎 Customer-Level RFM"
-        "</div>",
+        "<div class='section-title'>🔎 Customer-Level RFM</div>",
         unsafe_allow_html=True,
     )
 
     segment_filter = st.selectbox(
         "Select RFM Segment",
-        ["All"] + sorted(
-            rfm["RFM Segment"]
-            .dropna()
-            .unique()
-            .tolist()
-        ),
+        ["All"] + sorted(rfm["RFM Segment"].unique().tolist()),
         key="rfm_segment_filter",
     )
 
-    if segment_filter == "All":
-        rfm_filtered = rfm.copy()
-    else:
-        rfm_filtered = rfm[
-            rfm["RFM Segment"] == segment_filter
-        ]
+    rfm_filtered = (
+        rfm
+        if segment_filter == "All"
+        else rfm[rfm["RFM Segment"] == segment_filter]
+    )
 
-    # -----------------------------------------------------
-    # RFM TABLE
-    # -----------------------------------------------------
     rfm_columns = [
         "customer_id",
         "R",
@@ -1421,21 +1373,11 @@ elif page == "👥 RFM Segmentation":
         "risk_level",
         "total_charges",
     ]
+    rfm_columns = [c for c in rfm_columns if c in rfm_filtered.columns]
 
-    rfm_columns = [
-        column
-        for column in rfm_columns
-        if column in rfm_filtered.columns
-    ]
-
-    rfm_display = (
-        rfm_filtered[rfm_columns]
-        .sort_values(
-            "RFM Score",
-            ascending=False
-        )
-        .head(20)
-    )
+    rfm_display = rfm_filtered[rfm_columns].sort_values(
+        "RFM Score", ascending=False
+    ).head(20)
 
     st.dataframe(
         rfm_display,
@@ -1443,21 +1385,15 @@ elif page == "👥 RFM Segmentation":
         hide_index=True,
     )
 
-    # -----------------------------------------------------
-    # EXPORT
-    # -----------------------------------------------------
-    rfm_csv = (
-        rfm_filtered[rfm_columns]
-        .to_csv(index=False)
-        .encode("utf-8")
-    )
-
+    rfm_csv = rfm_filtered[rfm_columns].to_csv(index=False).encode("utf-8")
     st.download_button(
         "📥 Export RFM Analysis",
         data=rfm_csv,
         file_name="churniq_rfm_analysis.csv",
         mime="text/csv",
     )
+
+
 # =========================================================
 # PAGE 3: COHORT ANALYSIS
 # =========================================================
